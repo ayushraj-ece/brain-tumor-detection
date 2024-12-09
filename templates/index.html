@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Tumor Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* General page styling */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f7fa;
+            color: #333;
+        }
+
+        h1 {
+            font-weight: 600;
+            color: #007bff;
+        }
+
+        /* Result text area styling */
+        #resultText {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;  /* Standard font size */
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .result-section {
+            margin-bottom: 15px;
+        }
+
+        .result-section h5 {
+            font-size: 1.1rem; /* Slightly larger heading */
+            font-weight: 600;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .result-section p {
+            font-size: 1rem;
+            color: #555;
+            margin: 0;
+        }
+
+        .result-disclaimer {
+            font-style: italic;
+            font-size: 0.9rem;
+            color: #777;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        /* Form styling */
+        .form-control {
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        /* Image preview styling */
+        #imagePreview {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        #previewImg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Initially hide the result section */
+        #result {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <h1 class="text-center">Brain Tumor Detection</h1>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="file" class="form-label">Upload MRI Image</label>
+                    <input type="file" class="form-control" id="file" name="file" required accept="image/*">
+                </div>
+
+                <!-- Image Preview Section -->
+                <div id="imagePreview" class="text-center mb-3">
+                    <img id="previewImg" src="" alt="Image Preview" style="display:none;">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Upload and Analyze</button>
+            </form>
+
+            <div id="result" class="mt-4">
+                <h4 class="text-center">Result:</h4>
+                <div id="resultText">
+                    <!-- Result content will be dynamically inserted here -->
+                </div>
+
+                <div class="result-disclaimer">
+                    **Disclaimer:** This analysis is based solely on the provided image and is for informational purposes only. It is not a substitute for a professional medical diagnosis. A qualified radiologist or neurologist should interpret the MRI scan and provide a complete and accurate diagnosis.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Image preview functionality
+    document.getElementById('file').addEventListener('change', function(event) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var previewImg = document.getElementById('previewImg');
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block'; // Show the preview
+        };
+        reader.readAsDataURL(this.files[0]);
+    });
+
+    // Form submission with AJAX
+    $(document).ready(function() {
+        $('#uploadForm').on('submit', function(e) {
+            e.preventDefault();
+
+            // Clear previous result and hide the result section initially
+            $('#resultText').html('');
+            $('#result').hide();
+
+            var formData = new FormData(this);
+
+            $.ajax({
+                url: '/upload',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    if (response.result) {
+                        // Format the result as pointwise text
+                        const formattedResult = formatResult(response.result);
+                        $('#resultText').html(formattedResult);
+
+                        // Show the result section after analysis
+                        $('#result').fadeIn();
+                    } else {
+                        $('#resultText').text('Error: No result returned.');
+                        $('#result').fadeIn();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#resultText').text('Error: ' + error);
+                    $('#result').fadeIn();
+                }
+            });
+        });
+    });
+
+    // Function to format the result text
+    function formatResult(result) {
+        let formatted = '';
+
+        // Split the result into sections and format them
+        const sections = result.split('\n');
+
+        sections.forEach(section => {
+            if (section.includes(':')) {
+                const [key, value] = section.split(':');
+                formatted += `
+                    <div class="result-section">
+                        <h5>${key.trim()}:</h5>
+                        <p>${value.trim()}</p>
+                    </div>
+                `;
+            } else {
+                formatted += `<p>${section}</p>`;
+            }
+        });
+
+        return formatted;
+    }
+</script>
+
+</body>
+</html>
